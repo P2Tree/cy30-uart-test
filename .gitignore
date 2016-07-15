@@ -1,3 +1,6 @@
 *.o
 cy30_main
+uart_test
+(auto)*.sh
 *~
+
