@@ -16,6 +16,9 @@
 #include "cy30_com.h"
 #include <stdlib.h>
 
+// because of 'Segmentation Fault', set 'dev' to global variable.
+unsigned int dev = 1;        // com port. 1 is ttymxc1, 2 is ttymxc2
+
 int set_opt(int fd, int nSpeed, int nBits, char nEvent, int nStop) {
     struct termios newtio, oldtio;
     if (tcgetattr(fd, &oldtio) != 0) {
@@ -94,9 +97,17 @@ int set_opt(int fd, int nSpeed, int nBits, char nEvent, int nStop) {
 
 int open_port() {
     int fd;
-    if (-1 == (fd = open("/dev/ttymxc1", O_RDWR | O_NOCTTY | O_NONBLOCK)) )     {
-        perror ("Can't Open Serial Port");
-        return -1;
+    if (1 == dev) {
+        if (-1 == (fd = open("/dev/ttymxc1", O_RDWR | O_NOCTTY | O_NONBLOCK)) ) {
+            perror ("Can't Open Serial Port");
+            return -1;
+        }
+    }
+    else if (2 == dev) {
+        if (-1 == (fd = open("/dev/ttymxc2", O_RDWR | O_NOCTTY | O_NONBLOCK)) ) {
+            perror ("Can't Open Serial Port");
+            return -1;
+        }
     }
     if (isatty(STDIN_FILENO) == 0) {
         printf("standard input is not a terminal device \n");
@@ -213,6 +224,10 @@ int resultProcess(DistanceContainer *container, unsigned char *origin,
         unsigned int len, Action action) {
     unsigned char originDist[7];
     int i;
+    if (0x45 == origin[3] && 0x52 == origin[4] && 0x52 == origin[5]) {
+        printf("wrong data: receive ERR message.\n");
+        return -1;
+    }
     if (checkCS(origin, len)) {
         printf("Error: receive error result, checkCS stop.\n");
         return -1;
@@ -260,6 +275,7 @@ int resultProcess(DistanceContainer *container, unsigned char *origin,
             printf("analysis command: Error Action\n");
             return -1;
     }
+    return 0;
 }
 
 float calculateDistance(unsigned char * originDist) {
@@ -269,38 +285,61 @@ float calculateDistance(unsigned char * originDist) {
 }
 
 int cy30_run(void) {
-    int fd;
+    int fd1, fd2;
     unsigned int nread;
-    unsigned int readlen = 20;
-    unsigned char readbuff[readlen];
-    unsigned char *cmd;
-    unsigned int cmdlen = 0;
+    unsigned char readbuff[READLEN];
+    unsigned char *cmd1;
+    unsigned int cmdlen1 = 0;
+    unsigned char *cmd2;
+    unsigned int cmdlen2 = 0;
     DistanceContainer container;
     int i;
+    int flag = 0;
     memset(readbuff, 0, sizeof(readbuff));
-    fd = com_control();
-    if (!( cmdlen = constructCommand(Measure, 0x80, MeasureOnce, &cmd))) {
+    dev = 1;
+    fd1 = com_control();
+    dev = 2;
+    fd2 = com_control();
+    if (!( cmdlen1 = constructCommand(Measure, 0x80, MeasureOnce, &cmd1))) {
+        printf("Construct command fault\n");
+        return -1;
+    }
+    if (!( cmdlen2 = constructCommand(Measure, 0x81, MeasureOnce, &cmd2))) {
         printf("Construct command fault\n");
         return -1;
     }
 
     while(1) {
-        write(fd, cmd, cmdlen);
-        tcflush(fd, TCOFLUSH);
-        sleep(1);
-        nread = read(fd, readbuff, readlen);
+        if (0 == flag) {
+            write(fd1, cmd1, cmdlen1);
+            tcflush(fd1, TCOFLUSH);
+            sleep(1);
+            nread = read(fd1, readbuff, READLEN);
+            tcflush(fd1, TCIFLUSH);
+            flag = 1;
+        }
+        else {
+            write(fd2, cmd2, cmdlen2);
+            tcflush(fd2, TCOFLUSH);
+            sleep(1);
+            nread = read(fd2, readbuff, READLEN);
+            tcflush(fd2, TCIFLUSH);
+            flag = 0;
+        }
         if (!nread) {
             printf("read no data\n");
-            tcflush(fd, TCIFLUSH);
             continue;
         }
-        tcflush(fd, TCIFLUSH);
-        resultProcess(&container, readbuff, nread, MeasureOnce);
-        printf("address is 0x%02X , distance is %.3f\n", 
-                container.address, container.distance);
+        // process data
+        if (0 == resultProcess(&container, readbuff, nread, MeasureOnce)) {
+            printf("address is 0x%02X , distance is %.3f\n", 
+                    container.address, container.distance);
+        }
         memset(readbuff, 0, sizeof(readbuff));
     }
-    free(cmd);
-    close(fd);
+    free(cmd1);
+    free(cmd2);
+    close(fd1);
+    close(fd2);
     return 0;
 }

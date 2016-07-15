@@ -8,6 +8,11 @@
 #define CY30_COM_H
 
 /**
+ * ** COUNTANT
+ */
+#define READLEN                     20
+
+/**
  * ** PARAMENTS
  */
 /* commands is always follow the form of: [HEADER] [READ/WRITE] [CONTENT] [C] */
@@ -160,9 +165,17 @@ int set_opt(int fd, int nSpeed, int nBits, char nEvent, int nStop);
 
 /**
  * open_port: function for open port, you should change uart device name in it.
+ * @param   dev     open port device number
  * @return 0 is down
  */
 int open_port();
+
+/**
+ * com_control: initialization a new uart port
+ * @param   dev     open port device number
+ * @retval  0 is down
+ */
+int com_control();
 
 /**
  * cy30_control: main function of cy30 sensor.
