@@ -8,9 +8,12 @@
 #define CY30_COM_H
 
 /**
- * ** COUNTANT
+ * ** ARGUMENTS
  */
-#define READLEN                     20
+#define READLEN                     20      // The max read string length
+
+// because of 'Segmentation Fault', set 'dev' to global variable.
+static unsigned int dev = 1;        // com port. 1 is ttymxc1, 2 is ttymxc2
 
 /**
  * ** PARAMENTS
@@ -115,7 +118,7 @@ typedef struct container{
  * @param   len             length of precommand
  * @retval                  return CS, 0x00 is fault
  */
-unsigned char calculateCS(unsigned char * precommand, unsigned int len);
+static unsigned char calculateCS(unsigned char * precommand, unsigned int len);
 
 /**
  * checkCS: check received data is right with cs bit
@@ -123,7 +126,7 @@ unsigned char calculateCS(unsigned char * precommand, unsigned int len);
  * @param   len             lenght of receive command
  * @retval                  0 is right cs, 1 is wrong cs, -1 is fault
  */
-int checkCS(unsigned char * origin, unsigned int len);
+static int checkCS(unsigned char * origin, unsigned int len);
 
 /**
  * constructCommand: to construct command, full command
@@ -134,7 +137,7 @@ int checkCS(unsigned char * origin, unsigned int len);
  * @retval                  return length of command, -1 is fault
  *
  */
-int constructCommand(Mode mode, unsigned char address, 
+static int constructCommand(Mode mode, unsigned char address, 
         Action action, unsigned char **command);
 /**
  * resultProcess: used to analysis result recieved
@@ -144,14 +147,14 @@ int constructCommand(Mode mode, unsigned char address,
  * @param   action          which action return to origin
  * @origin                  0 is down
  */
-int resultProcess(DistanceContainer *container, unsigned char * origin, unsigned len, Action action);
+static int resultProcess(DistanceContainer *container, unsigned char * origin, unsigned len, Action action);
 
 /**
  * calculateDistance: used to calculate distance
  * @param   originDist      part chars of distance in received data, always 7 chars
  * @retval                  distance in float form
  */
-float calculateDistance(unsigned char *originDist);
+static float calculateDistance(unsigned char *originDist);
 /**
  * set_opt: This function is used to set serial communication argument.
  * @param  fd     serial com file point
@@ -161,27 +164,25 @@ float calculateDistance(unsigned char *originDist);
  * @param  nStop  serial transfer stop bit
  * @return        0 is down
  */
-int set_opt(int fd, int nSpeed, int nBits, char nEvent, int nStop);
+static int set_opt(int fd, int nSpeed, int nBits, char nEvent, int nStop);
 
 /**
  * open_port: function for open port, you should change uart device name in it.
- * @param   dev     open port device number
  * @return 0 is down
  */
-int open_port();
+static int open_port();
 
 /**
  * com_control: initialization a new uart port
- * @param   dev     open port device number
  * @retval  0 is down
  */
-int com_control();
+static int com_control();
 
 /**
  * cy30_control: main function of cy30 sensor.
  * @return 0 is down
  */
-int cy30_control();
+static int cy30_control();
 
 /**
  * cy30_run: entrance of cy30 control.

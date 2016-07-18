@@ -16,8 +16,65 @@
 #include "cy30_com.h"
 #include <stdlib.h>
 
-// because of 'Segmentation Fault', set 'dev' to global variable.
-unsigned int dev = 1;        // com port. 1 is ttymxc1, 2 is ttymxc2
+
+int cy30_run(void) {
+    int fd1, fd2;
+    unsigned int nread;
+    unsigned char readbuff[READLEN];
+    unsigned char *cmd1;
+    unsigned int cmdlen1 = 0;
+    unsigned char *cmd2;
+    unsigned int cmdlen2 = 0;
+    DistanceContainer container;
+    int i;
+    int flag = 0;
+    memset(readbuff, 0, sizeof(readbuff));
+    dev = 1;
+    fd1 = com_control();
+    dev = 2;
+    fd2 = com_control();
+    if (!( cmdlen1 = constructCommand(Measure, 0x80, MeasureOnce, &cmd1))) {
+        printf("Construct command fault\n");
+        return -1;
+    }
+    if (!( cmdlen2 = constructCommand(Measure, 0x81, MeasureOnce, &cmd2))) {
+        printf("Construct command fault\n");
+        return -1;
+    }
+    while(1) {
+        if (0 == flag) {
+            write(fd1, cmd1, cmdlen1);
+            tcflush(fd1, TCOFLUSH);
+            sleep(1);
+            nread = read(fd1, readbuff, READLEN);
+            tcflush(fd1, TCIFLUSH);
+            flag = 1;
+        }
+        else {
+            write(fd2, cmd2, cmdlen2);
+            tcflush(fd2, TCOFLUSH);
+            sleep(1);
+            nread = read(fd2, readbuff, READLEN);
+            tcflush(fd2, TCIFLUSH);
+            flag = 0;
+        }
+        if (!nread) {
+            printf("read no data\n");
+            continue;
+        }
+        // process data
+        if (0 == resultProcess(&container, readbuff, nread, MeasureOnce)) {
+            printf("address is 0x%02X , distance is %.3f\n", 
+                    container.address, container.distance);
+        }
+        memset(readbuff, 0, sizeof(readbuff));
+    }
+    free(cmd1);
+    //free(cmd2);
+    close(fd1);
+    //close(fd2);
+    return 0;
+}
 
 int set_opt(int fd, int nSpeed, int nBits, char nEvent, int nStop) {
     struct termios newtio, oldtio;
@@ -167,35 +224,22 @@ int checkCS(unsigned char * origin, unsigned int len) {
         return 1;   // wrong cs
 }
 
-int constructCommand(Mode mode, unsigned char address, 
-        Action action, unsigned char **cmd ) {
+int constructCommand(Mode mode, unsigned char address, Action action, unsigned char **cmd ) {
     unsigned int len = 0;
     unsigned char cs = 0x00;
     switch(action) {
-        case ReadArguments :
-            break;
-        case ReadMachineNum :
-            break;
-        case SetAddress :
-            break;
-        case CalibrateDistance :
-            break;
-        case SetMeaInterver :
-            break;
-        case SetPosition :
-            break;
-        case SetRange :
-            break;
-        case SetFrequence :
-            break;
-        case SetResolution :
-            break;
-        case SetMeasureInBoot :
-            break;
-        case MeasureOnceInBuffer :
-            break;
-        case ReadBuffer :
-            break;
+        case ReadArguments : break;
+        case ReadMachineNum : break;
+        case SetAddress : break;
+        case CalibrateDistance : break;
+        case SetMeaInterver : break;
+        case SetPosition : break;
+        case SetRange : break;
+        case SetFrequence : break;
+        case SetResolution : break;
+        case SetMeasureInBoot : break;
+        case MeasureOnceInBuffer : break;
+        case ReadBuffer : break;
         case MeasureOnce :
             len = 4;
             *cmd = (unsigned char*)calloc(len, sizeof(unsigned char));
@@ -204,12 +248,9 @@ int constructCommand(Mode mode, unsigned char address,
             (*cmd)[2] = MEASURE_READ_READONCE;
             len = 3;
             break;
-        case MeasureContinuous :
-            break;
-        case SetLaser :
-            break;
-        case Shutdown :
-            break;
+        case MeasureContinuous : break;
+        case SetLaser : break;
+        case Shutdown : break;
         default:
             printf("Constructing command: Error Action\n");
             return -1;
@@ -220,8 +261,7 @@ int constructCommand(Mode mode, unsigned char address,
     return len;
 }
 
-int resultProcess(DistanceContainer *container, unsigned char *origin, 
-        unsigned int len, Action action) {
+int resultProcess(DistanceContainer *container, unsigned char *origin, unsigned int len, Action action) {
     unsigned char originDist[7];
     int i;
     if (0x45 == origin[3] && 0x52 == origin[4] && 0x52 == origin[5]) {
@@ -233,30 +273,18 @@ int resultProcess(DistanceContainer *container, unsigned char *origin,
         return -1;
     }
     switch(action) {
-        case ReadArguments :
-            break;
-        case ReadMachineNum :
-            break;
-        case SetAddress :
-            break;
-        case CalibrateDistance :
-            break;
-        case SetMeaInterver :
-            break;
-        case SetPosition :
-            break;
-        case SetRange :
-            break;
-        case SetFrequence :
-            break;
-        case SetResolution :
-            break;
-        case SetMeasureInBoot :
-            break;
-        case MeasureOnceInBuffer :
-            break;
-        case ReadBuffer :
-            break;
+        case ReadArguments : break;
+        case ReadMachineNum : break;
+        case SetAddress : break;
+        case CalibrateDistance : break;
+        case SetMeaInterver : break;
+        case SetPosition : break;
+        case SetRange : break;
+        case SetFrequence : break;
+        case SetResolution : break;
+        case SetMeasureInBoot : break;
+        case MeasureOnceInBuffer : break;
+        case ReadBuffer : break;
         case MeasureOnce :
             if (!(RECEIVE_READONCE == origin[2]))
                 return -1;
@@ -265,12 +293,9 @@ int resultProcess(DistanceContainer *container, unsigned char *origin,
                 originDist[i] = origin[3+i];
             (*container).distance = calculateDistance(originDist);
             break;
-        case MeasureContinuous :
-            break;
-        case SetLaser :
-            break;
-        case Shutdown :
-            break;
+        case MeasureContinuous : break;
+        case SetLaser : break;
+        case Shutdown : break;
         default:
             printf("analysis command: Error Action\n");
             return -1;
@@ -284,62 +309,3 @@ float calculateDistance(unsigned char * originDist) {
         (float)(originDist[5] - '0')*0.01 + (float)(originDist[6] - '0')*0.001;
 }
 
-int cy30_run(void) {
-    int fd1, fd2;
-    unsigned int nread;
-    unsigned char readbuff[READLEN];
-    unsigned char *cmd1;
-    unsigned int cmdlen1 = 0;
-    unsigned char *cmd2;
-    unsigned int cmdlen2 = 0;
-    DistanceContainer container;
-    int i;
-    int flag = 0;
-    memset(readbuff, 0, sizeof(readbuff));
-    dev = 1;
-    fd1 = com_control();
-    dev = 2;
-    fd2 = com_control();
-    if (!( cmdlen1 = constructCommand(Measure, 0x80, MeasureOnce, &cmd1))) {
-        printf("Construct command fault\n");
-        return -1;
-    }
-    if (!( cmdlen2 = constructCommand(Measure, 0x81, MeasureOnce, &cmd2))) {
-        printf("Construct command fault\n");
-        return -1;
-    }
-
-    while(1) {
-        if (0 == flag) {
-            write(fd1, cmd1, cmdlen1);
-            tcflush(fd1, TCOFLUSH);
-            sleep(1);
-            nread = read(fd1, readbuff, READLEN);
-            tcflush(fd1, TCIFLUSH);
-            flag = 1;
-        }
-        else {
-            write(fd2, cmd2, cmdlen2);
-            tcflush(fd2, TCOFLUSH);
-            sleep(1);
-            nread = read(fd2, readbuff, READLEN);
-            tcflush(fd2, TCIFLUSH);
-            flag = 0;
-        }
-        if (!nread) {
-            printf("read no data\n");
-            continue;
-        }
-        // process data
-        if (0 == resultProcess(&container, readbuff, nread, MeasureOnce)) {
-            printf("address is 0x%02X , distance is %.3f\n", 
-                    container.address, container.distance);
-        }
-        memset(readbuff, 0, sizeof(readbuff));
-    }
-    free(cmd1);
-    free(cmd2);
-    close(fd1);
-    close(fd2);
-    return 0;
-}
